@@ -28,7 +28,7 @@ blueprint:
     ## Inputs for actions
     action_delay:
       name: Verzögerung
-      description: Wie lange nach dem Knopfdruck gewartet werden soll bevor alles deaktiviert wird.
+      description: Wie lange nach dem Knopfdruck gewartet werden soll bevor die Automatisierung ausgelöst wird.
       selector:
         duration:
       default:
@@ -36,7 +36,7 @@ blueprint:
         minutes: 0
         seconds: 0
     light_target:
-      name: Lichter
+      name: Lichter ausschalten
       description: Diese Lichter werden mit der Automatisierung ausgeschaltet. Leer lassen, wenn keine Lichter ausgeschaltet werden sollen.
       selector:
         target:
@@ -45,7 +45,7 @@ blueprint:
                 - light
       default: {}
     media_target:
-      name: Medienplayer
+      name: Medienplayer ausschalten
       description: Diese Medienplayer werden mit der Automatisierung ausgeschaltet. Leer lassen, wenn keine Medienplayer ausgeschaltet werden sollen.
       selector:
         target:
@@ -54,7 +54,7 @@ blueprint:
                 - media_player
       default: {}
     switch_target:
-      name: Steckdosen & Schalter
+      name: Steckdosen & Schalter ausschalten
       description: Diese Steckdosen und Schalter werden mit der Automatisierung ausgeschaltet. Leer lassen, wenn keine Steckdosen oder Schalter ausgeschaltet werden sollen.
       selector:
         target:
