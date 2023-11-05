@@ -6,7 +6,7 @@ blueprint:
   description: Schaltet per Knopfdruck ausgewählte Geräte aus.
   domain: automation
   author: loocd
-  source_url: https://github.com/loocd/home-assistant/blob/main/blueprints/AllOffButton
+  source_url: https://github.com/loocd/home-assistant/blob/main/blueprints/AllOffButton.yaml
 
   ###############
   # User Inputs #
