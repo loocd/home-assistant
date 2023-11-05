@@ -2,7 +2,7 @@ blueprint:
   #############
   # Meta Data #
   #############
-  name: Alles aus
+  name: Alles aus Knopf
   description: Schaltet per Knopfdruck ausgewählte Geräte aus.
   domain: automation
   author: loocd
