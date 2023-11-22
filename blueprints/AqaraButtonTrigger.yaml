@@ -2,7 +2,7 @@ blueprint:
   ############
   # Metadata #
   ############
-  name: Aqara Single Press
+  name: Aqara Trigger
   description: Schaltet ausgewählte Geräte um (aus->an oder an->aus) wenn ein Aqara Smart Button gedrückt wird.
   domain: automation
   author: loocd
@@ -84,10 +84,7 @@ blueprint:
       name: Medienplayer umschalten
       description: Diese Medienplayer werden mit der Automatisierung ein- oder ausgeschaltet. Leer lassen, wenn keine Medienplayer angesteuert werden sollen.
       selector:
-        target:
-          entity:
-            - domain:
-                - media_player
+        media:
       default: {}
 
     switch_target:
@@ -100,11 +97,22 @@ blueprint:
                 - switch
       default: {}
 
+    scene_selector:
+      name: Zu aktivierende Szene
+      description: Auswahl der Szene, welche aktiviert werden soll. Dazu muss Action type "Activate scene" und dann im zweiten Dropdown die gewünschte Szene gewählt werden.
+      selector:
+        action:
+      default: {}
+
 variables: # needed to incorporate the values into templates conditions
   cover_target_openclose: !input cover_target_openclose
   cover_target_tilt: !input cover_target_tilt
   light_target: !input light_target
   media_target: !input media_target
+  mt_target: "{{ media_target.entity_id }}"
+  mt_content: "{{ media_target.media_content_id }}"
+  mt_type: "{{ media_target.media_content_type }}"
+  mt_metadata: "{{ media_target.metadata }}"
   switch_target: !input switch_target
 
 ###################
@@ -151,3 +159,37 @@ action:
       - service: light.toggle
         data: {}
         target: !input light_target
+
+  ## Media
+  - if:
+      - condition: template
+        value_template: "{{ media_target != {} }}"
+    then:
+      - choose:
+          - conditions:
+              - condition: state
+                entity_id: "{{ mt_target }}"
+                state: playing
+            sequence:
+              - service: media_player.media_pause
+                data: {}
+                target:
+                  entity_id: "{{ mt_target }}"
+        default:
+          - service: media_player.play_media
+            target:
+              entity_id: "{{ mt_target }}"
+            data:
+              media_content_id: >-
+                "{{ mt_content }}"
+              media_content_type: "{{ mt_type }}"
+            metadata: "{{ mt_metadata }}"
+
+  ## Switches and outlets
+  - if:
+      - condition: template
+        value_template: "{{ switch_target != {} }}"
+    then:
+      - service: switch.toggle
+        data: {}
+        target: !input switch_target
