@@ -1,0 +1,231 @@
+blueprint:
+  ############
+  # Metadata #
+  ############
+  name: Aqara Single Press
+  description: Schaltet ausgewählte Geräte um (aus->an oder an->aus) wenn ein Aqara Smart Button gedrückt wird.
+  domain: automation
+  author: loocd
+  source_url: https://github.com/loocd/home-assistant/blob/main/blueprints/AqaraButtonSinglePress.yaml
+
+  ###############
+  # User Inputs #
+  ###############
+
+  input:
+    ## Inputs for triggers
+    trigger_button:
+      name: Auslöser
+      description: Der Knopf, welcher die Automatisierung auslösen soll. Es können auch mehrere Knöpfe benutzt werden.
+      selector:
+        device: # device selector is needed because only devices allow to track if the button has been pressed. The button press is not exposed as an entity.
+          filter:
+            - integration: zha # only show ZHA devices in order to reduce the number of devices to select from.
+          entity: # all devices that have at least one entity that matches below prerequisites
+            - domain:
+                - sensor #sensor because all these buttons have a battery sensor integrated - this is not relevant to the automation but makes it easier to find the correct device
+    
+    trigger_type:
+      name: Click Type
+      description: Wie soll geklickt werden, um die Automatisierung auszulösen?
+      selector:
+        select:
+          options:
+            - label: Einfachklick
+              value: remote_button_short_press
+            - label: Doppelklick
+              value: remote_button_double_press
+            - label: Langer Klick
+              value: remote_button_long_pres
+      default: "remote_button_short_press"
+
+    ## Inputs for actions
+    action_delay:
+      name: Verzögerung
+      description: Wie lange nach dem Knopfdruck gewartet werden soll bevor die Automatisierung ausgelöst wird.
+      selector:
+        duration:
+      default:
+        hours: 0
+        minutes: 0
+        seconds: 0
+
+    cover_target_openclose:
+      name: Storen öffnen oder schliessen
+      description: Diese Storen werden mit der Automatisierung geöffnet oder geschlossen. Leer lassen, wenn keine Storen umgeschaltet werden sollen.
+      selector:
+        target:
+          entity:
+            - domain:
+                - cover
+      default: {}
+
+    cover_target_tilt:
+      name: Winkel der Storen umstellen
+      description: Für diese Storen wird mit der Automatisierung der Winkel umgestellt. Leer lassen, wenn keine Storen umgestellt werden sollen.
+      selector:
+        target:
+          entity:
+            - domain:
+                - cover
+      default: {}
+
+    light_target:
+      name: Lichter ein oder ausschalten
+      description: Diese Lichter werden mit der Automatisierung ein- oder ausgeschaltet. Leer lassen, wenn keine Lichter umgeschaltet werden sollen.
+      selector:
+        target:
+          entity:
+            - domain:
+                - light
+      default: {}
+
+    media_target:
+      name: Medienplayer umschalten
+      description: Diese Medienplayer werden mit der Automatisierung ein- oder ausgeschaltet. Leer lassen, wenn keine Medienplayer angesteuert werden sollen.
+      selector:
+        target:
+          entity:
+            - domain:
+                - media_player
+      default: {}
+
+    switch_target:
+      name: Steckdosen & Schalter ein- oder ausschalten
+      description: Diese Steckdosen und Schalter werden mit der Automatisierung ein- oder ausgeschaltet. Leer lassen, wenn keine Steckdosen oder Schalter umgeschaltet werden sollen.
+      selector:
+        target:
+          entity:
+            - domain:
+                - switch
+      default: {}
+
+variables: # needed to incorporate the values into templates conditions
+  light_target: !input light_target
+  media_target: !input media_target
+  switch_target: !input switch_target
+
+###################
+# Automatisierung #
+###################
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: device
+    domain: zha
+    device_id: !input all_off_button
+    type: remote_button_short_press
+    subtype: turn_on
+
+condition: []
+
+action:
+  - delay: !input action_delay
+
+  ## Turn off lights
+  - if:
+      - condition: template
+        value_template: "{{ light_target != {} }}"
+    then:
+      - service: light.turn_off
+        data: {}
+        target: !input light_target
+
+  ## Turn off media players
+  - if:
+      - condition: template
+        value_template: "{{ media_target != {} }}"
+    then:
+      - service: media_player.media_pause
+        data: {}
+        target: !input media_target
+
+  ## Turn off switches and outlets
+  - if:
+      - condition: template
+        value_template: "{{ switch_target != {} }}"
+    then:
+      - service: switch.turn_off
+        data: {}
+        target: !input switch_target
+
+
+
+
+alias: "--BlueprintSmartButtton"
+description: ""
+trigger:
+  - device_id: 4e44a233e14769e9222cbc62db1d0566
+    domain: zha
+    platform: device
+    type: remote_button_short_press
+    subtype: turn_on
+  - device_id: 49b5178e4cecdeb7b45ffff9a036459c
+    domain: zha
+    platform: device
+    type: remote_button_short_press
+    subtype: remote_button_short_press
+condition: []
+action:
+  - service: cover.toggle
+    data: {}
+  - service: cover.toggle_cover_tilt
+    data: {}
+  - service: light.toggle
+    data:
+      transition: 13
+      rgb_color:
+        - 162
+        - 32
+        - 138
+      color_temp: 300
+      brightness_pct: 52
+    target:
+      entity_id: light.esstischlampe_oben
+  - choose:
+      - conditions:
+          - condition: state
+            entity_id: media_player.sonos_wohnzimmer
+            state: playing
+        sequence:
+          - service: media_player.media_pause
+            data: {}
+            target:
+              entity_id: media_player.sonos_wohnzimmer
+    default:
+      - service: media_player.play_media
+        target:
+          entity_id: media_player.sonos_wohnzimmer
+        data:
+          media_content_id: >-
+            spotify://664df7145b43d772971ba503141bb9e1/spotify:playlist:37i9dQZF1DWUPafHP1BJw1
+          media_content_type: spotify://playlist
+        metadata:
+          title: Pop Goes Classical
+          thumbnail: https://i.scdn.co/image/ab67706f00000003a3ec66c3103d1aea84672888
+          media_class: playlist
+          children_media_class: track
+          navigateIds:
+            - {}
+            - media_content_type: spotify://library
+              media_content_id: spotify://664df7145b43d772971ba503141bb9e1
+            - media_content_type: spotify://current_user_playlists
+              media_content_id: >-
+                spotify://664df7145b43d772971ba503141bb9e1/current_user_playlists
+            - media_content_type: spotify://playlist
+              media_content_id: >-
+                spotify://664df7145b43d772971ba503141bb9e1/spotify:playlist:37i9dQZF1DWUPafHP1BJw1
+  - service: switch.toggle
+    data: {}
+    target:
+      entity_id: switch.schalter_entertainment_alt
+  - service: switch.toggle
+    data: {}
+    target:
+      entity_id: switch.smart_plug_balkon
+  - service: scene.turn_on
+    target:
+      entity_id: scene.candle_light_dinner
+    metadata: {}
+mode: single
