@@ -37,6 +37,7 @@ blueprint:
               value: remote_button_double_press
             - label: Langer Klick
               value: remote_button_long_pres
+          mode: dropdown
       default: "remote_button_short_press"
 
     ## Inputs for actions
@@ -99,10 +100,13 @@ blueprint:
 
     scene_selector:
       name: Zu aktivierende Szene
-      description: Auswahl der Szene, welche aktiviert werden soll. Dazu muss Action type "Activate scene" und dann im zweiten Dropdown die gewünschte Szene gewählt werden.
+      description: Auswahl der Szene, welche aktiviert werden soll. Leer lassen, wenn keine Szene aktiviert werden sollen.
       selector:
-        action:
-      default: {}
+        entity:
+          filter:
+            - domain:
+                - scene
+      default: ""
 
 variables: # needed to incorporate the values into templates conditions
   cover_target_openclose: !input cover_target_openclose
@@ -114,6 +118,7 @@ variables: # needed to incorporate the values into templates conditions
   mt_type: "{{ media_target.media_content_type }}"
   mt_metadata: "{{ media_target.metadata }}"
   switch_target: !input switch_target
+  scene_selector: !input scene_selector
 
 ###################
 # Automatisierung #
@@ -193,3 +198,11 @@ action:
       - service: switch.toggle
         data: {}
         target: !input switch_target
+
+  ## Scene activation
+  - if:
+      - condition: template
+        value_template: "{{ scene_selector != '' }}"
+    then:
+      - service: scene.turn_on
+        target: !input scene_selector
