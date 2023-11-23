@@ -22,6 +22,9 @@ blueprint:
           filter:
             - integration: zha # only show ZHA devices in order to reduce the number of devices to select from.
               manufacturer: LUMI #only show Aqara Buttons
+          entity: # all devices that have at least one entity that matches below prerequisites
+            - domain:
+                - sensor #sensor because all these buttons have a battery sensor integrated - this is not relevant to the automation but makes it easier to find the correct device
 
     trigger_type:
       name: Click Type
