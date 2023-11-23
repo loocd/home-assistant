@@ -2,7 +2,7 @@ blueprint:
   ############
   # Metadata #
   ############
-  name: Alles aus Knopf
+  name: Alles aus Knopf mit Aqara
   description: Schaltet per Knopfdruck ausgewählte Geräte aus.
   domain: automation
   author: loocd
@@ -21,9 +21,25 @@ blueprint:
         device: # device selector is needed because only devices allow to track if the button has been pressed. The button press is not exposed as an entity.
           filter:
             - integration: zha # only show ZHA devices in order to reduce the number of devices to select from.
+              manufacturer: LUMI #only show Aqara Buttons
           entity: # all devices that have at least one entity that matches below prerequisites
             - domain:
                 - sensor #sensor because all these buttons have a battery sensor integrated - this is not relevant to the automation but makes it easier to find the correct device
+
+    trigger_type:
+      name: Click Type
+      description: Wie soll geklickt werden, um die Automatisierung auszulösen?
+      selector:
+        select:
+          options:
+            - label: Einfachklick
+              value: remote_button_short_press
+            - label: Doppelklick
+              value: remote_button_double_press
+            - label: Langer Klick
+              value: remote_button_long_press
+          mode: dropdown
+      default: "remote_button_short_press"
 
     ## Inputs for actions
     action_delay:
@@ -78,8 +94,8 @@ trigger:
   - platform: device
     domain: zha
     device_id: !input all_off_button
-    type: remote_button_short_press
-    subtype: turn_on
+    type: !input trigger_type
+    subtype: !input trigger_type
 
 condition: []
 
