@@ -16,7 +16,7 @@ blueprint:
     ## Inputs for triggers
     trigger_button:
       name: Auslöser
-      description: Der Knopf, welcher die Automatisierung auslösen soll. Es können auch mehrere Knöpfe benutzt werden.
+      description: Der Knopf, welcher die Automatisierung auslösen soll.
       selector:
         device: # device selector is needed because only devices allow to track if the button has been pressed. The button press is not exposed as an entity.
           filter:
@@ -173,20 +173,19 @@ action:
       - choose:
           - conditions:
               - condition: state
-                entity_id: "{{ mt_target }}"
+                entity_id: "{{ media_target.entity_id }}"
                 state: playing
             sequence:
               - service: media_player.media_pause
                 data: {}
                 target:
-                  entity_id: "{{ mt_target }}"
+                  entity_id: "{{ media_target.entity_id }}"
         default:
           - service: media_player.play_media
             target:
-              entity_id: "{{ mt_target }}"
+              entity_id: "{{ media_target.entity_id }}"
             data:
-              media_content_id: >-
-                "{{ mt_content }}"
+              media_content_id: "{{ mt_content }}"
               media_content_type: "{{ mt_type }}"
             metadata: "{{ mt_metadata }}"
 
