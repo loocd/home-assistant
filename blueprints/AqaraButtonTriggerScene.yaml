@@ -21,9 +21,7 @@ blueprint:
         device: # device selector is needed because only devices allow to track if the button has been pressed. The button press is not exposed as an entity.
           filter:
             - integration: zha # only show ZHA devices in order to reduce the number of devices to select from.
-          entity: # all devices that have at least one entity that matches below prerequisites
-            - domain:
-                - sensor #sensor because all these buttons have a battery sensor integrated - this is not relevant to the automation but makes it easier to find the correct device
+            - manufacturer: LUMI
 
     trigger_type:
       name: Click Type
