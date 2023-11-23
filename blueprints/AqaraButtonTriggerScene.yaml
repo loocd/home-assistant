@@ -1,0 +1,91 @@
+blueprint:
+  ############
+  # Metadata #
+  ############
+  name: Szene mit Aqara Button aktivieren
+  description: Aktiviert die gewünschte Szene mit Klick auf den Aqara Button.
+  domain: automation
+  author: loocd
+  source_url: https://github.com/loocd/home-assistant/blob/main/blueprints/AqaraButtonTriggerScene.yaml
+
+  ###############
+  # User Inputs #
+  ###############
+
+  input:
+    ## Inputs for triggers
+    trigger_button:
+      name: Auslöser
+      description: Der Knopf, welcher die Automatisierung auslösen soll.
+      selector:
+        device: # device selector is needed because only devices allow to track if the button has been pressed. The button press is not exposed as an entity.
+          filter:
+            - integration: zha # only show ZHA devices in order to reduce the number of devices to select from.
+          entity: # all devices that have at least one entity that matches below prerequisites
+            - domain:
+                - sensor #sensor because all these buttons have a battery sensor integrated - this is not relevant to the automation but makes it easier to find the correct device
+
+    trigger_type:
+      name: Click Type
+      description: Wie soll geklickt werden, um die Automatisierung auszulösen?
+      selector:
+        select:
+          options:
+            - label: Einfachklick
+              value: remote_button_short_press
+            - label: Doppelklick
+              value: remote_button_double_press
+            - label: Langer Klick
+              value: remote_button_long_pres
+          mode: dropdown
+      default: "remote_button_short_press"
+
+    ## Inputs for actions
+    action_delay:
+      name: Verzögerung
+      description: Wie lange nach dem Knopfdruck gewartet werden soll bevor die Automatisierung ausgelöst wird.
+      selector:
+        duration:
+      default:
+        hours: 0
+        minutes: 0
+        seconds: 0
+
+    scene_selector:
+      name: Zu aktivierende Szene
+      description: Auswahl der Szene, welche aktiviert werden soll.
+      selector:
+        entity:
+          filter:
+            - domain:
+                - scene
+      default: ""
+
+variables: # needed to incorporate the values into templates conditions
+  scene_selector: !input scene_selector
+
+###################
+# Automatisierung #
+###################
+mode: single
+max_exceeded: silent
+
+trigger:
+  - device_id: !input trigger_button
+    domain: zha
+    platform: device
+    type: !input trigger_type
+    subtype: !input trigger_type
+
+condition: []
+
+action:
+  - delay: !input action_delay
+
+  ## Scene activation
+  - if:
+      - condition: template
+        value_template: "{{ scene_selector != '' }}"
+    then:
+      - service: scene.turn_on
+        target: !input scene_selector
