@@ -34,7 +34,7 @@ blueprint:
             - label: Doppelklick
               value: remote_button_double_press
             - label: Langer Klick
-              value: remote_button_long_pres
+              value: remote_button_long_press
           mode: dropdown
       default: "remote_button_short_press"
 
