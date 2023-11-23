@@ -21,7 +21,7 @@ blueprint:
         device: # device selector is needed because only devices allow to track if the button has been pressed. The button press is not exposed as an entity.
           filter:
             - integration: zha # only show ZHA devices in order to reduce the number of devices to select from.
-              manufacturer: LUMI
+              manufacturer: LUMI #only show Aqara Buttons
 
     trigger_type:
       name: Click Type
@@ -86,4 +86,5 @@ action:
         value_template: "{{ scene_selector != '' }}"
     then:
       - service: scene.turn_on
-        target: !input scene_selector
+        target:
+          entity_id: !input scene_selector
