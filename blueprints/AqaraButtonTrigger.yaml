@@ -6,7 +6,7 @@ blueprint:
   description: Schaltet ausgewählte Geräte um (aus->an oder an->aus) wenn ein Aqara Smart Button gedrückt wird.
   domain: automation
   author: loocd
-  source_url: https://github.com/loocd/home-assistant/blob/main/blueprints/AqaraButtonTrigger.yaml
+  source_url: https://github.com/loocd/home-assistant/blob/3854a5063ec9f7121bb6d3c9b0240a93cbd60243/blueprints/AqaraButtonTrigger.yaml
 
   ###############
   # User Inputs #
