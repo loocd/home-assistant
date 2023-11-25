@@ -6,7 +6,7 @@ blueprint:
   description: Schaltet per Knopfdruck ausgewählte Geräte aus.
   domain: automation
   author: loocd
-  source_url: https://github.com/loocd/home-assistant/blob/main/blueprints/AqaraAllOffButton.yaml
+  source_url: https://github.com/loocd/home-assistant/blob/4455ef3b1c6721ba1364ce4de20a92a1d496ca18/blueprints/AqaraAllOffButton.yaml
 
   ###############
   # User Inputs #
