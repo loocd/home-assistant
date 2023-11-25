@@ -20,8 +20,7 @@ blueprint:
       selector:
         entity:
           filter:
-            - device_class:
-                - motion
+            - device_class: motion
 
     off_timer:
       name: Licht Timer
@@ -34,16 +33,6 @@ blueprint:
         seconds: 0
 
     ## Inputs for actions
-    action_delay:
-      name: Verzögerung
-      description: Wie lange nach dem Knopfdruck gewartet werden soll bevor die Automatisierung ausgelöst wird.
-      selector:
-        duration:
-      default:
-        hours: 0
-        minutes: 0
-        seconds: 0
-
     lux_sensor_device:
       name: Lux-Sensor Gerät
       description: Das Gerät, welches die Helligkeit im Raum misst. Leer lassen, wenn die Helligkeit nicht gemessen werden soll.
@@ -52,7 +41,7 @@ blueprint:
           filter:
             domain: sensor
             device_class: illuminance
-      default: {}
+      default: ""
 
     lux_sensor_entity:
       name: Lux-Sensor
@@ -62,29 +51,34 @@ blueprint:
           filter:
             domain: sensor
             device_class: illuminance
-      default: {}
+      default: ""
 
     lux_value:
       name: Helligkeitsgrenze
       description: Die Lichter werden nur eingeschaltet wenn der Lux-Wert weniger beträgt als hier angegeben. Leer lassen, wenn die Lichter immer eingeschaltet werden sollen.
       selector:
-        target:
-          entity:
-            - domain:
-                - light
-      default: {}
+        number:
+      default: ""
 
     after_time:
       name: Licht einschalten ab Zeit
       description: Die Lichter werden nur nach dieser Uhrzeit eingeschaltet. Kann z.B. verwendet werden, damit das Licht nicht Morgens um 3:00 angeht.
       selector:
         time:
+      default:
+        hours: 0
+        minutes: 0
+        seconds: 0
 
     before_time:
       name: Licht einschalten vor Zeit
       description: Die Lichter werden nur vor dieser Uhrzeit eingeschaltet. Kann z.B. verwendet werden, damit das Licht nicht Abends um 11:00 angeht.
       selector:
         time:
+      default:
+        hours: 23
+        minutes: 59
+        seconds: 59
 
     light_target:
       name: Lichter steuern
@@ -138,8 +132,6 @@ trigger:
 condition: []
 
 action:
-  - delay: !input action_delay
-
   - choose:
       - conditions:
           - condition: trigger
@@ -149,11 +141,11 @@ action:
           - choose:
               - conditions:
                   - condition: template
-                    value_template: "{{ lux_sensor_device != {} }}"
+                    value_template: "{{ lux_sensor_device != '' }}"
                   - condition: template
-                    value_template: "{{ lux_sensor_entity != {} }}"
+                    value_template: "{{ lux_sensor_entity != '' }}"
                   - condition: template
-                    value_template: "{{ lux_value != {} }}"
+                    value_template: "{{ lux_value != '' }}"
                 sequence:
                   - if:
                       - type: is_illuminance
