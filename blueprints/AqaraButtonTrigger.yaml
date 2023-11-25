@@ -2,7 +2,7 @@ blueprint:
   ############
   # Metadata #
   ############
-  name: Aqara Trigger
+  name: Aqara Button Trigger
   description: Schaltet ausgewählte Geräte um (aus->an oder an->aus) wenn ein Aqara Smart Button gedrückt wird.
   domain: automation
   author: loocd
