@@ -6,7 +6,7 @@ blueprint:
   description: Aktiviert die gewünschte Szene mit Klick auf den Aqara Button.
   domain: automation
   author: loocd
-  source_url: https://github.com/loocd/home-assistant/blob/main/blueprints/AqaraButtonTriggerScene.yaml
+  source_url: https://github.com/loocd/home-assistant/blob/db61fb7779f73379702f0a3a52e867c5c5e1a2df/blueprints/AqaraButtonTriggerScene.yaml
 
   ###############
   # User Inputs #
