@@ -6,7 +6,7 @@ blueprint:
   description: Schaltet Lichter in Abhängigkeit von Bewegungsmeldern ein und aus.
   domain: automation
   author: loocd
-  source_url: https://github.com/loocd/home-assistant/blob/4455ef3b1c6721ba1364ce4de20a92a1d496ca18/blueprints/AqaraAllOffButton.yaml
+  source_url: https://github.com/loocd/home-assistant/blob/de8b42a406851c2ebfbf1632d4b89d3fe769dcc0/blueprints/MotionTriggerLights.yaml
 
   ###############
   # User Inputs #
@@ -14,32 +14,24 @@ blueprint:
 
   input:
     ## Inputs for triggers
-    all_off_button:
-      name: Alles aus Taste
-      description: Der Knopf, welche die Automatisierung auslösen soll.
+    motion_sensors:
+      name: Bewegungsmelder
+      description: Die Bewegugnsmelder, welche das Licht auslösen sollen. Falls mehrere Sensoren verwendet werden sollen, dann sollen diese in einem Helfer gruppiert und hier der Helfer verwendet werden.
       selector:
-        device: # device selector is needed because only devices allow to track if the button has been pressed. The button press is not exposed as an entity.
+        entity:
           filter:
-            - integration: zha # only show ZHA devices in order to reduce the number of devices to select from.
-              manufacturer: LUMI #only show Aqara Buttons
-          entity: # all devices that have at least one entity that matches below prerequisites
-            - domain:
-                - sensor #sensor because all these buttons have a battery sensor integrated - this is not relevant to the automation but makes it easier to find the correct device
+            - device_class:
+                - motion
 
-    trigger_type:
-      name: Click Type
-      description: Wie soll geklickt werden, um die Automatisierung auszulösen?
+    off_timer:
+      name: Licht Timer
+      description: Wie lange das Licht eingeschaltet bleiben soll, nachdem keine Bewegung mehr erkannt wird.
       selector:
-        select:
-          options:
-            - label: Einfachklick
-              value: remote_button_short_press
-            - label: Doppelklick
-              value: remote_button_double_press
-            - label: Langer Klick
-              value: remote_button_long_press
-          mode: dropdown
-      default: "remote_button_short_press"
+        duration:
+      default:
+        hours: 0
+        minutes: 0
+        seconds: 0
 
     ## Inputs for actions
     action_delay:
@@ -51,27 +43,62 @@ blueprint:
         hours: 0
         minutes: 0
         seconds: 0
-    light_target:
-      name: Lichter ausschalten
-      description: Diese Lichter werden mit der Automatisierung ausgeschaltet. Leer lassen, wenn keine Lichter ausgeschaltet werden sollen.
+
+    lux_sensor_device:
+      name: Lux-Sensor Gerät
+      description: Das Gerät, welches die Helligkeit im Raum misst. Leer lassen, wenn die Helligkeit nicht gemessen werden soll.
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            device_class: illuminance
+      default: {}
+
+    lux_sensor_entity:
+      name: Lux-Sensor
+      description: Der Sensor, welcher die Helligkeit im Raum misst. Leer lassen, wenn die Helligkeit nicht gemessen werden soll.
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            device_class: illuminance
+      default: {}
+
+    lux_value:
+      name: Helligkeitsgrenze
+      description: Die Lichter werden nur eingeschaltet wenn der Lux-Wert weniger beträgt als hier angegeben. Leer lassen, wenn die Lichter immer eingeschaltet werden sollen.
       selector:
         target:
           entity:
             - domain:
                 - light
       default: {}
-    media_target:
-      name: Medienplayer ausschalten
-      description: Diese Medienplayer werden mit der Automatisierung ausgeschaltet. Leer lassen, wenn keine Medienplayer ausgeschaltet werden sollen.
+
+    after_time:
+      name: Licht einschalten ab Zeit
+      description: Die Lichter werden nur nach dieser Uhrzeit eingeschaltet. Kann z.B. verwendet werden, damit das Licht nicht Morgens um 3:00 angeht.
+      selector:
+        time:
+
+    before_time:
+      name: Licht einschalten vor Zeit
+      description: Die Lichter werden nur vor dieser Uhrzeit eingeschaltet. Kann z.B. verwendet werden, damit das Licht nicht Abends um 11:00 angeht.
+      selector:
+        time:
+
+    light_target:
+      name: Lichter steuern
+      description: Diese Lichter werden mit der Automatisierung ein- oder ausgeschaltet. Leer lassen, wenn keine Lichter ein- oder ausgeschaltet werden sollen.
       selector:
         target:
           entity:
             - domain:
-                - media_player
+                - light
       default: {}
+
     switch_target:
-      name: Steckdosen & Schalter ausschalten
-      description: Diese Steckdosen und Schalter werden mit der Automatisierung ausgeschaltet. Leer lassen, wenn keine Steckdosen oder Schalter ausgeschaltet werden sollen.
+      name: Steckdosen & Schalter steuern
+      description: Diese Steckdosen und Schalter werden mit der Automatisierung ein- oder ausgeschaltet. Leer lassen, wenn keine Steckdosen oder Schalter ein- oder ausgeschaltet werden sollen.
       selector:
         target:
           entity:
@@ -81,8 +108,8 @@ blueprint:
 
 variables: # needed to incorporate the values into templates conditions
   light_target: !input light_target
-  media_target: !input media_target
   switch_target: !input switch_target
+  lux_value: !input lux_value
 
 ###################
 # Automatisierung #
@@ -91,40 +118,135 @@ mode: single
 max_exceeded: silent
 
 trigger:
-  - platform: device
-    domain: zha
-    device_id: !input all_off_button
-    type: !input trigger_type
-    subtype: !input trigger_type
+  - platform: state
+    entity_id: !input motion_sensors
+    to: "on"
+    id: bewegung_erkannt
+
+  - platform: state
+    entity_id: !input motion_sensors
+    to: "off"
+    for: !input off_timer
+    id: keine_bewegung
+
+  - platform: state
+    entity_id: !input light_target
+    to: "on"
+    for: !input off_timer
+    id: light_stayed_on
 
 condition: []
 
 action:
   - delay: !input action_delay
 
-  ## Turn off lights
-  - if:
-      - condition: template
-        value_template: "{{ light_target != {} }}"
-    then:
-      - service: light.turn_off
-        data: {}
-        target: !input light_target
+  - choose:
+      - conditions:
+          - condition: trigger
+            id:
+              - bewegung_erkannt
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ lux_sensor_device != {} }}"
+                  - condition: template
+                    value_template: "{{ lux_sensor_entity != {} }}"
+                  - condition: template
+                    value_template: "{{ lux_value != {} }}"
+                sequence:
+                  - if:
+                      - type: is_illuminance
+                        condition: device
+                        device_id: !input lux_sensor_device
+                        entity_id: !input lux_sensor_entity
+                        domain: sensor
+                        below: !input lux_value
+                      - condition: time
+                        after: !input after_time
+                        before: !input before_time
+                    then:
+                      - if:
+                          - condition: template
+                            value_template: "{{ light_target != {} }}"
+                        then:
+                          - service: light.turn_on
+                            data: {}
+                            target: !input light_target
+                      - if:
+                          - condition: template
+                            value_template: "{{ switch_target != {} }}"
+                        then:
+                          - service: switch.turn_on
+                            data: {}
+                            target: !input switch_target
+            default:
+              - if:
+                  - condition: time
+                    after: !input after_time
+                    before: !input before_time
+                then:
+                  - if:
+                      - condition: template
+                        value_template: "{{ light_target != {} }}"
+                    then:
+                      - service: light.turn_on
+                        data: {}
+                        target: !input light_target
+                  - if:
+                      - condition: template
+                        value_template: "{{ switch_target != {} }}"
+                    then:
+                      - service: switch.turn_on
+                        data: {}
+                        target: !input switch_target
 
-  ## Turn off media players
-  - if:
-      - condition: template
-        value_template: "{{ media_target != {} }}"
-    then:
-      - service: media_player.media_pause
-        data: {}
-        target: !input media_target
+      - conditions:
+          - condition: trigger
+            id:
+              - keine_bewegung
+        sequence:
+          ## Turn off lights
+          - if:
+              - condition: template
+                value_template: "{{ light_target != {} }}"
+            then:
+              - service: light.turn_off
+                data: {}
+                target: !input light_target
 
-  ## Turn off switches and outlets
-  - if:
-      - condition: template
-        value_template: "{{ switch_target != {} }}"
-    then:
-      - service: switch.turn_off
-        data: {}
-        target: !input switch_target
+          ## Turn off switches and outlets
+          - if:
+              - condition: template
+                value_template: "{{ switch_target != {} }}"
+            then:
+              - service: switch.turn_off
+                data: {}
+                target: !input switch_target
+
+      - conditions:
+          - condition: trigger
+            id:
+              - light_stayed_on
+        sequence:
+          - condition: state
+            entity_id: !input motion_sensors
+            state: "off"
+            for: !input off_timer
+          ## Turn off lights
+          - if:
+              - condition: template
+                value_template: "{{ light_target != {} }}"
+            then:
+              - service: light.turn_off
+                data: {}
+                target: !input light_target
+
+          ## Turn off switches and outlets
+          - if:
+              - condition: template
+                value_template: "{{ switch_target != {} }}"
+            then:
+              - service: switch.turn_off
+                data: {}
+                target: !input switch_target
