@@ -1,0 +1,130 @@
+blueprint:
+  ############
+  # Metadata #
+  ############
+  name: Lichtsteuerung mit Bewegungsmelder
+  description: Schaltet Lichter in Abhängigkeit von Bewegungsmeldern ein und aus.
+  domain: automation
+  author: loocd
+  source_url: https://github.com/loocd/home-assistant/blob/4455ef3b1c6721ba1364ce4de20a92a1d496ca18/blueprints/AqaraAllOffButton.yaml
+
+  ###############
+  # User Inputs #
+  ###############
+
+  input:
+    ## Inputs for triggers
+    all_off_button:
+      name: Alles aus Taste
+      description: Der Knopf, welche die Automatisierung auslösen soll.
+      selector:
+        device: # device selector is needed because only devices allow to track if the button has been pressed. The button press is not exposed as an entity.
+          filter:
+            - integration: zha # only show ZHA devices in order to reduce the number of devices to select from.
+              manufacturer: LUMI #only show Aqara Buttons
+          entity: # all devices that have at least one entity that matches below prerequisites
+            - domain:
+                - sensor #sensor because all these buttons have a battery sensor integrated - this is not relevant to the automation but makes it easier to find the correct device
+
+    trigger_type:
+      name: Click Type
+      description: Wie soll geklickt werden, um die Automatisierung auszulösen?
+      selector:
+        select:
+          options:
+            - label: Einfachklick
+              value: remote_button_short_press
+            - label: Doppelklick
+              value: remote_button_double_press
+            - label: Langer Klick
+              value: remote_button_long_press
+          mode: dropdown
+      default: "remote_button_short_press"
+
+    ## Inputs for actions
+    action_delay:
+      name: Verzögerung
+      description: Wie lange nach dem Knopfdruck gewartet werden soll bevor die Automatisierung ausgelöst wird.
+      selector:
+        duration:
+      default:
+        hours: 0
+        minutes: 0
+        seconds: 0
+    light_target:
+      name: Lichter ausschalten
+      description: Diese Lichter werden mit der Automatisierung ausgeschaltet. Leer lassen, wenn keine Lichter ausgeschaltet werden sollen.
+      selector:
+        target:
+          entity:
+            - domain:
+                - light
+      default: {}
+    media_target:
+      name: Medienplayer ausschalten
+      description: Diese Medienplayer werden mit der Automatisierung ausgeschaltet. Leer lassen, wenn keine Medienplayer ausgeschaltet werden sollen.
+      selector:
+        target:
+          entity:
+            - domain:
+                - media_player
+      default: {}
+    switch_target:
+      name: Steckdosen & Schalter ausschalten
+      description: Diese Steckdosen und Schalter werden mit der Automatisierung ausgeschaltet. Leer lassen, wenn keine Steckdosen oder Schalter ausgeschaltet werden sollen.
+      selector:
+        target:
+          entity:
+            - domain:
+                - switch
+      default: {}
+
+variables: # needed to incorporate the values into templates conditions
+  light_target: !input light_target
+  media_target: !input media_target
+  switch_target: !input switch_target
+
+###################
+# Automatisierung #
+###################
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: device
+    domain: zha
+    device_id: !input all_off_button
+    type: !input trigger_type
+    subtype: !input trigger_type
+
+condition: []
+
+action:
+  - delay: !input action_delay
+
+  ## Turn off lights
+  - if:
+      - condition: template
+        value_template: "{{ light_target != {} }}"
+    then:
+      - service: light.turn_off
+        data: {}
+        target: !input light_target
+
+  ## Turn off media players
+  - if:
+      - condition: template
+        value_template: "{{ media_target != {} }}"
+    then:
+      - service: media_player.media_pause
+        data: {}
+        target: !input media_target
+
+  ## Turn off switches and outlets
+  - if:
+      - condition: template
+        value_template: "{{ switch_target != {} }}"
+    then:
+      - service: switch.turn_off
+        data: {}
+        target: !input switch_target
