@@ -1,0 +1,322 @@
+blueprint:
+  ############
+  # Metadata #
+  ############
+  name: Lichtsteuerung mit Bewegungsmelder
+  description: Schaltet Lichter in Abhängigkeit von Bewegungsmeldern ein und aus.
+  domain: automation
+  author: loocd
+  source_url: https://github.com/loocd/home-assistant/blob/de8b42a406851c2ebfbf1632d4b89d3fe769dcc0/blueprints/MotionTriggerLights.yaml
+
+  ###############
+  # User Inputs #
+  ###############
+
+  input:
+    ## Inputs for triggers
+    motion_sensors:
+      name: Bewegungsmelder
+      description: Die Bewegugnsmelder, welche das Licht auslösen sollen. Falls mehrere Sensoren verwendet werden sollen, dann sollen diese in einem Helfer gruppiert und hier der Helfer verwendet werden.
+      selector:
+        entity:
+          filter:
+            - domain: binary_sensor
+              device_class:
+                - motion
+                - occupancy
+
+    main_light:
+      name: Hauptlicht/Hauptschalter
+      description: Das Hauptlicht oder der Hauptschalter für diese Automatisierung. Der Status dieses Geräts wird verfolgt, um nach einer gegebenen Zeit alle Lichter/Schalter wieder auszuschalten. Dies kann auch eine Gruppe sein, welche alle Lichter und/oder Schalter des Bereichs beinhaltet.
+      selector:
+        entity:
+          filter:
+            - domain:
+                - light
+                - switch
+
+    off_timer:
+      name: Licht Timer
+      description: Wie lange das Licht eingeschaltet bleiben soll, nachdem keine Bewegung mehr erkannt wird.
+      selector:
+        duration:
+      default:
+        hours: 0
+        minutes: 0
+        seconds: 0
+
+    ## Inputs for actions
+    lux_sensor_device:
+      name: Lux-Sensor Gerät
+      description: Das Gerät, welches die Helligkeit im Raum misst. Leer lassen, wenn die Helligkeit nicht gemessen werden soll.
+      selector:
+        device:
+          entity:
+            - domain: sensor
+              device_class: illuminance
+          multiple: false
+      default:
+
+    lux_sensor_entity:
+      name: Lux-Sensor Entität
+      description: Der Sensor, welcher die Helligkeit im Raum misst. Leer lassen, wenn die Helligkeit nicht gemessen werden soll.
+      selector:
+        entity:
+          filter:
+            domain: sensor
+            device_class: illuminance
+          multiple: false
+      default:
+
+    lux_value:
+      name: Helligkeitsgrenze
+      description: Die Lichter werden nur eingeschaltet wenn der Lux-Wert weniger beträgt als hier angegeben. Leer lassen, wenn die Lichter immer eingeschaltet werden sollen.
+      selector:
+        number:
+          unit_of_measurement: "lx"
+          mode: slider
+          min: 50
+          max: 500
+      default:
+
+    after_time:
+      name: Licht einschalten ab Zeit
+      description: Die Lichter werden nur nach dieser Uhrzeit eingeschaltet. Kann z.B. verwendet werden, damit das Licht nicht Morgens um 3:00 angeht.
+      selector:
+        time:
+      default: "0:00:00"
+
+    before_time:
+      name: Licht einschalten vor Zeit
+      description: Die Lichter werden nur vor dieser Uhrzeit eingeschaltet. Kann z.B. verwendet werden, damit das Licht nicht Nachts um 23:00 angeht.
+      selector:
+        time:
+      default: "23:59:59"
+
+    light_target:
+      name: Lichter steuern
+      description: Diese Lichter werden mit der Automatisierung ein- oder ausgeschaltet. Leer lassen, wenn keine Lichter ein- oder ausgeschaltet werden sollen.
+      selector:
+        target:
+          entity:
+            - domain:
+                - light
+      default: {}
+
+    switch_target:
+      name: Steckdosen & Schalter steuern
+      description: Diese Steckdosen und Schalter werden mit der Automatisierung ein- oder ausgeschaltet. Leer lassen, wenn keine Steckdosen oder Schalter ein- oder ausgeschaltet werden sollen.
+      selector:
+        target:
+          entity:
+            - domain:
+                - switch
+      default: {}
+
+variables: # needed to incorporate the values into templates conditions
+  light_target: !input light_target
+  switch_target: !input switch_target
+  lux_sensor_device: !input lux_sensor_device
+  lux_sensor_entity: !input lux_sensor_entity
+  #lux_sensor_device: "{{ device_id(lux_sensor_entity) }}"
+  lux_value: !input lux_value
+
+  ###################
+  # Automatisierung #
+###################
+mode: single
+max_exceeded: silent
+
+trigger:
+  - platform: state
+    entity_id: !input motion_sensors
+    to: "on"
+    id: bewegung_erkannt
+
+  - platform: state
+    entity_id: !input motion_sensors
+    to: "off"
+    for: !input off_timer
+    id: keine_bewegung
+
+  - platform: state
+    entity_id: !input main_light
+    to: "on"
+    for: !input off_timer
+    id: light_stayed_on
+
+condition: []
+
+action:
+  - choose:
+      - conditions: # movement triggered
+          - condition: trigger
+            id: bewegung_erkannt
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ (lux_sensor_device != none) and (lux_sensor_entity != none) and (lux_value != none) }}"
+                sequence:
+                  - condition: device
+                    type: is_illuminance
+                    device_id: !input lux_sensor_device
+                    entity_id: !input lux_sensor_entity
+                    domain: sensor
+                    below: !input lux_value
+                  - condition: time
+                    after: !input after_time
+                    before: !input before_time
+                  - if:
+                      - condition: template
+                        value_template: "{{ light_target != {} }}"
+                    then:
+                      - service: light.toggle
+                        data: {}
+                        target: !input light_target
+                  - if:
+                      - condition: template
+                        value_template: "{{ switch_target != {} }}"
+                    then:
+                      - service: switch.toggle
+                        data: {}
+                        target: !input switch_target
+
+            default:
+              - condition: time
+                after: !input after_time
+                before: !input before_time
+              - if:
+                  - condition: template
+                    value_template: "{{ light_target != {} }}"
+                then:
+                  - service: light.toggle
+                    data: {}
+                    target: !input light_target
+              - if:
+                  - condition: template
+                    value_template: "{{ switch_target != {} }}"
+                then:
+                  - service: switch.toggle
+                    data: {}
+                    target: !input switch_target
+
+      - conditions: # no more movement
+          - condition: trigger
+            id: keine_bewegung
+        sequence:
+
+      - conditions: # Light on for x minutes
+          - condition: trigger
+            id: light_stayed_on
+        sequence:
+
+  #action:
+  - choose:
+      - conditions:
+          - condition: trigger
+            id: bewegung_erkannt
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: and
+                    conditions:
+                      - condition: template
+                        value_template: "{{ (lux_sensor_device != none) }}"
+                      - condition: template
+                        value_template: "{{ (lux_sensor_entity != none) }}"
+                      - condition: template
+                        value_template: "{{ (lux_value != none) }}"
+                sequence:
+                  - choose:
+                      - conditions:
+                          - condition: and
+                            conditions:
+                              - type: is_illuminance
+                                condition: device
+                                device_id: "{{ lux_sensor_device | string }}"
+                                entity_id: !input lux_sensor_entity
+                                domain: sensor
+                                below: !input lux_value
+                              - condition: time
+                                after: !input after_time
+                                before: !input before_time
+                    sequence:
+                      - choose:
+                          - conditions:
+                              - condition: template
+                                value_template: "{{ light_target != {} }}"
+                            sequence:
+                              - service: light.turn_on
+                                data: {}
+                                target: !input light_target
+                          - conditions:
+                              - condition: template
+                                value_template: "{{ switch_target != {} }}"
+                            sequence:
+                              - service: switch.turn_on
+                                data: {}
+                                target: !input switch_target
+                  - choose:
+                      - conditions:
+                          - condition: time
+                            after: !input after_time
+                            before: !input before_time
+                    sequence:
+                      - choose:
+                          - conditions:
+                              - condition: template
+                                value_template: "{{ light_target != {} }}"
+                            sequence:
+                              - service: light.turn_on
+                                data: {}
+                                target: !input light_target
+                          - conditions:
+                              - condition: template
+                                value_template: "{{ switch_target != {} }}"
+                            sequence:
+                              - service: switch.turn_on
+                                data: {}
+                                target: !input switch_target
+      - conditions:
+          - condition: trigger
+            id: keine_bewegung
+        sequence:
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ light_target != {} }}"
+                sequence:
+                  - service: light.turn_off
+                    data: {}
+                    target: !input light_target
+              - conditions:
+                  - condition: template
+                    value_template: "{{ switch_target != {} }}"
+                sequence:
+                  - service: switch.turn_off
+                    data: {}
+                    target: !input switch_target
+      - conditions:
+          - condition: trigger
+            id: light_stayed_on
+        sequence:
+          - condition: state
+            entity_id: !input motion_sensors
+            state: "off"
+            for: !input off_timer
+          - choose:
+              - conditions:
+                  - condition: template
+                    value_template: "{{ light_target != {} }}"
+                sequence:
+                  - service: light.turn_off
+                    data: {}
+                    target: !input light_target
+              - conditions:
+                  - condition: template
+                    value_template: "{{ switch_target != {} }}"
+                sequence:
+                  - service: switch.turn_off
+                    data: {}
+                    target: !input switch_target
