@@ -288,3 +288,8 @@ action:
               - service: switch.turn_off
                 data: {}
                 target: !input switch_target
+          ## Custom actions
+          - if:
+              - condition: template
+                value_template: "{{custom_actions_noMotion != none }}"
+            then: !input custom_actions_noMotion
