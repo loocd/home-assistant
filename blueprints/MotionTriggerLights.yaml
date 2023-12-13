@@ -114,7 +114,7 @@ blueprint:
     custom_actions:
       name: Benutzerdefinierte Aktionen (optional)
       description:
-        "ACHTUNG: Nur für erfahrene Anwender Hier können weitere benutzerdefinierte Aktionen für diese Automatisierung festgelegt werden.
+        "ACHTUNG: Nur für Experten! Hier können weitere benutzerdefinierte Aktionen für diese Automatisierung festgelegt werden.
         Aktionen müssen selbständig den entsprechenden Auslösern (bewegung_erkannt, keine_bewegung, light_stayed_on) zugewiesen werden."
       selector:
         action: {}
