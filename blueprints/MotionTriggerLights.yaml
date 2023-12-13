@@ -2,8 +2,8 @@ blueprint:
   ############
   # Metadata #
   ############
-  name: Lichtsteuerung mit Bewegungsmelder
-  description: Schaltet Lichter in Abhängigkeit von Bewegungsmeldern ein und aus.
+  name: Licht- und Schaltersteuerung mit Bewegungsmelder
+  description: Schaltet Lichter und Schalter in Abhängigkeit von Bewegungsmeldern ein und aus. Unterstützt optional das Verwenden eines Lichtsensors um festzulegen, dass ab einer gewissen Helligkeit die Lichter nicht angehen.
   domain: automation
   author: loocd
   source_url: https://github.com/loocd/home-assistant/blob/de8b42a406851c2ebfbf1632d4b89d3fe769dcc0/blueprints/MotionTriggerLights.yaml
