@@ -79,10 +79,19 @@ blueprint:
                 - switch
       default: {}
 
+    custom_actions:
+      name: Benutzerdefinierte Aktionen (optional)
+      description: "ACHTUNG: Nur für Experten!
+        Hier können weitere benutzerdefinierte Aktionen festgelegt werden, welche durch diese Automatisierung ausgelöst werden."
+      selector:
+        action: {}
+      default:
+
 variables: # needed to incorporate the values into templates conditions
   light_target: !input light_target
   media_target: !input media_target
   switch_target: !input switch_target
+  custom_actions: !input custom_actions
 
 ###################
 # Automatisierung #
@@ -128,3 +137,9 @@ action:
       - service: switch.turn_off
         data: {}
         target: !input switch_target
+
+  ## Custom actions
+  - if:
+      - condition: template
+        value_template: "{{custom_actions != none }}"
+    then: !input custom_actions
