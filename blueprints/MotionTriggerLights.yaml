@@ -111,13 +111,21 @@ blueprint:
                 - switch
       default: {}
 
-    custom_actions:
-      name: Benutzerdefinierte Aktionen (optional)
-      description:
-        "ACHTUNG: Nur für Experten! Hier können weitere benutzerdefinierte Aktionen für diese Automatisierung festgelegt werden.
-        Aktionen müssen selbständig den entsprechenden Auslösern (bewegung_erkannt, keine_bewegung, light_stayed_on) zugewiesen werden."
+    custom_actions_motion:
+      name: Benutzerdefinierte Aktionen bei Bewegung (optional)
+      description: "ACHTUNG: Nur für Experten!
+        Hier können weitere benutzerdefinierte Aktionen festgelegt werden, welche bei erkannter Bewegung ausgelöst werden."
       selector:
         action: {}
+      default:
+
+    custom_actions_noMotion:
+      name: Benutzerdefinierte Aktionen bei Abwesenheit (optional)
+      description: "ACHTUNG: Nur für Experten!
+        Hier können weitere benutzerdefinierte Aktionen festgelegt werden, welche ausgelöst werden sobald keine Bewegung mehr erkannt wird."
+      selector:
+        action: {}
+      default:
 
 variables: # needed to incorporate the values into templates conditions
   light_target: !input light_target
@@ -126,6 +134,8 @@ variables: # needed to incorporate the values into templates conditions
   lux_sensor_entity: !input lux_sensor_entity
   #lux_sensor_device: "{{ device_id(lux_sensor_entity) }}"
   lux_value: !input lux_value
+  custom_actions_motion: !input custom_actions_motion
+  custom_actions_noMotion: !input custom_actions_noMotion
 
 ###################
 # Automatisierung #
@@ -155,6 +165,9 @@ condition: []
 
 action:
   - choose:
+      ###############################################
+      ## Wird ausgelöst wenn Bewegung erkannt wird ##
+      ###############################################
       - conditions:
           - condition: trigger
             id:
@@ -185,6 +198,11 @@ action:
                       - service: switch.turn_on
                         data: {}
                         target: !input switch_target
+                  ## Custom actions
+                  - if:
+                      - condition: template
+                        value_template: "{{custom_actions_motion != none }}"
+                    then: !input custom_actions_motion
             else:
               - if:
                   - condition: time
@@ -205,6 +223,15 @@ action:
                       - service: switch.turn_on
                         data: {}
                         target: !input switch_target
+                  ## Custom actions
+                  - if:
+                      - condition: template
+                        value_template: "{{custom_actions_motion != none }}"
+                    then: !input custom_actions_motion
+
+      ##############################################################################
+      ## Wird ausgelöst wenn eine bestimmte Zeit lang keine Bewegung erkannt wird ##
+      ##############################################################################
       - conditions:
           - condition: trigger
             id:
@@ -227,7 +254,15 @@ action:
               - service: switch.turn_off
                 data: {}
                 target: !input switch_target
+          ## Custom actions
+          - if:
+              - condition: template
+                value_template: "{{custom_actions_noMotion != none }}"
+            then: !input custom_actions_noMotion
 
+      #################################################################################################################
+      ## Wird ausgelöst wenn Licht manuell angezündet wurde und eine bestimmte Zeit lang keine Bewegung erkannt wird ##
+      #################################################################################################################
       - conditions:
           - condition: trigger
             id:
@@ -253,6 +288,3 @@ action:
               - service: switch.turn_off
                 data: {}
                 target: !input switch_target
-
-  - condition: template
-    value_template: "{{custom_actions != none }}"
